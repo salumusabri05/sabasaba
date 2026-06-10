@@ -1,0 +1,11 @@
+numpy==2.0.2
+scikit-learn==1.6.1
+joblib
+mediapipe==0.10.14
+opencv-python
+Pillow
+tk
+gradio
+watchdog
+azure-cognitiveservices-speech
+websockets

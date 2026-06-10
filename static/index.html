@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Bridging Silence</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0e17;
+    --surface: #131a2b;
+    --surface2: #1a2340;
+    --primary: #4f8fff;
+    --primary-glow: rgba(79,143,255,.25);
+    --accent: #00e5a0;
+    --danger: #ff4d6a;
+    --warn: #ffb347;
+    --text: #e8ecf4;
+    --text2: #8892a6;
+    --radius: 14px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'Inter',sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    min-height:100dvh;
+    display:flex;
+    flex-direction:column;
+  }
+
+  /* ---- Header ---- */
+  header {
+    text-align:center;
+    padding:16px 12px 10px;
+    background:linear-gradient(180deg,#0f1524,var(--bg));
+  }
+  header h1 {
+    font-size:1.4rem;
+    font-weight:800;
+    letter-spacing:2px;
+    background:linear-gradient(135deg,var(--primary),var(--accent));
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+  }
+  header p { font-size:.75rem; color:var(--text2); margin-top:2px; }
+
+  /* ---- Status bar ---- */
+  #status-bar {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:6px;
+    font-size:.75rem;
+    color:var(--text2);
+  }
+  .dot {
+    width:8px; height:8px; border-radius:50%;
+    background:#ff4d6a;
+    transition:background .3s;
+  }
+  .dot.connected { background:var(--accent); }
+
+  /* ---- Video area ---- */
+  #video-wrap {
+    position:relative;
+    width:100%;
+    max-width:520px;
+    margin:0 auto;
+    border-radius:var(--radius);
+    overflow:hidden;
+    border:2px solid var(--surface2);
+    background:#000;
+    aspect-ratio:4/3;
+  }
+  #video-wrap video {
+    width:100%; height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  #letter-overlay {
+    position:absolute;
+    bottom:12px; left:12px;
+    font-size:3rem;
+    font-weight:800;
+    color:#fff;
+    text-shadow:0 0 20px var(--primary-glow), 0 2px 8px rgba(0,0,0,.6);
+    transition:opacity .2s;
+  }
+  #hand-status {
+    position:absolute;
+    top:10px; right:10px;
+    font-size:.7rem;
+    padding:4px 10px;
+    border-radius:20px;
+    background:rgba(0,0,0,.55);
+    backdrop-filter:blur(6px);
+    color:var(--accent);
+    transition:color .3s;
+  }
+  #hand-status.no-hand { color:var(--danger); }
+  #confidence-bar {
+    position:absolute;
+    bottom:0; left:0;
+    height:3px;
+    background:var(--accent);
+    transition:width .15s;
+  }
+
+  /* ---- Prediction display ---- */
+  #predictions {
+    max-width:520px;
+    margin:12px auto;
+    width:100%;
+    padding:0 12px;
+  }
+  .pred-card {
+    background:var(--surface);
+    border-radius:var(--radius);
+    padding:14px 16px;
+    margin-bottom:8px;
+    border:1px solid var(--surface2);
+  }
+  .pred-card label {
+    font-size:.65rem;
+    text-transform:uppercase;
+    letter-spacing:1.5px;
+    color:var(--text2);
+    display:block;
+    margin-bottom:4px;
+  }
+  .pred-card .value {
+    font-size:1.1rem;
+    font-weight:600;
+    min-height:1.4em;
+    word-break:break-word;
+  }
+  .pred-card .value.empty { color:var(--text2); font-style:italic; font-weight:400; }
+
+  /* ---- Controls ---- */
+  #controls {
+    max-width:520px;
+    margin:0 auto 20px;
+    width:100%;
+    padding:0 12px;
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:8px;
+  }
+  #controls button {
+    font-family:'Inter',sans-serif;
+    font-size:.8rem;
+    font-weight:600;
+    padding:12px 6px;
+    border:none;
+    border-radius:var(--radius);
+    cursor:pointer;
+    transition:transform .1s, box-shadow .2s;
+    color:#fff;
+  }
+  #controls button:active { transform:scale(.95); }
+  .btn-start   { background:linear-gradient(135deg,#22c55e,#16a34a); }
+  .btn-stop    { background:linear-gradient(135deg,var(--danger),#e11d48); }
+  .btn-speak   { background:linear-gradient(135deg,var(--primary),#3b6fd4); }
+  .btn-clear   { background:linear-gradient(135deg,var(--warn),#f59e0b); color:#1a1a1a!important; }
+  .btn-del-l   { background:var(--surface2); }
+  .btn-del-w   { background:var(--surface2); }
+
+  /* ---- Camera picker ---- */
+  #cam-picker {
+    max-width:520px; margin:0 auto 8px; width:100%; padding:0 12px;
+    display:flex; gap:8px; align-items:center;
+  }
+  #cam-picker select {
+    flex:1;
+    font-family:'Inter',sans-serif;
+    font-size:.8rem;
+    padding:8px 10px;
+    border-radius:10px;
+    border:1px solid var(--surface2);
+    background:var(--surface);
+    color:var(--text);
+    outline:none;
+  }
+  #cam-picker label { font-size:.7rem; color:var(--text2); white-space:nowrap; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>BRIDGING SILENCE</h1>
+  <p>Camera-robust sign language recognition</p>
+</header>
+
+<div id="status-bar">
+  <span class="dot" id="ws-dot"></span>
+  <span id="ws-label">Disconnected</span>
+</div>
+
+<div id="cam-picker">
+  <label>Camera:</label>
+  <select id="camera-select"><option value="">Loading…</option></select>
+</div>
+
+<div id="video-wrap">
+  <video id="video" autoplay playsinline muted></video>
+  <div id="letter-overlay"></div>
+  <div id="hand-status" class="no-hand">No hand</div>
+  <div id="confidence-bar" style="width:0%"></div>
+</div>
+
+<div id="predictions">
+  <div class="pred-card">
+    <label>Word</label>
+    <div class="value empty" id="word-val">waiting…</div>
+  </div>
+  <div class="pred-card">
+    <label>Sentence</label>
+    <div class="value empty" id="sent-val">waiting…</div>
+  </div>
+</div>
+
+<div id="controls">
+  <button class="btn-start" id="btn-start">▶ Start</button>
+  <button class="btn-stop"  id="btn-stop">■ Stop</button>
+  <button class="btn-speak" id="btn-speak">🗣 Speak</button>
+  <button class="btn-clear" id="btn-clear">✕ Clear</button>
+  <button class="btn-del-l" id="btn-del-l">⌫ Letter</button>
+  <button class="btn-del-w" id="btn-del-w">🗑 Word</button>
+</div>
+
+<!-- Hidden canvas for frame capture -->
+<canvas id="capture-canvas" style="display:none"></canvas>
+
+<script>
+const video       = document.getElementById('video');
+const canvas      = document.getElementById('capture-canvas');
+const ctx         = canvas.getContext('2d');
+const letterOvl   = document.getElementById('letter-overlay');
+const handStatus  = document.getElementById('hand-status');
+const confBar     = document.getElementById('confidence-bar');
+const wordVal     = document.getElementById('word-val');
+const sentVal     = document.getElementById('sent-val');
+const wsDot       = document.getElementById('ws-dot');
+const wsLabel     = document.getElementById('ws-label');
+const camSelect   = document.getElementById('camera-select');
+
+let ws = null;
+let stream = null;
+let sendInterval = null;
+let currentFacing = 'user';   // "user" or "environment"
+
+// ---- WebSocket ----
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws`);
+
+  ws.onopen = () => {
+    wsDot.classList.add('connected');
+    wsLabel.textContent = 'Connected';
+  };
+  ws.onclose = () => {
+    wsDot.classList.remove('connected');
+    wsLabel.textContent = 'Disconnected';
+    setTimeout(connectWS, 2000);
+  };
+  ws.onmessage = (e) => {
+    const d = JSON.parse(e.data);
+    if (d.type === 'prediction' || d.type === 'state_update') {
+      if (d.letter !== undefined) {
+        letterOvl.textContent = d.letter || '';
+        letterOvl.style.opacity = d.letter ? 1 : 0.3;
+      }
+      if (d.hand_detected !== undefined) {
+        handStatus.textContent = d.hand_detected ? '✋ Hand detected' : 'No hand';
+        handStatus.className   = d.hand_detected ? '' : 'no-hand';
+      }
+      if (d.confidence !== undefined) {
+        confBar.style.width = (d.confidence * 100) + '%';
+      }
+      updateText(wordVal, d.word);
+      updateText(sentVal, d.sentence);
+    }
+    if (d.type === 'speak' && d.text) {
+      speakBrowser(d.text);
+    }
+  };
+}
+
+function updateText(el, val) {
+  if (val === undefined) return;
+  el.textContent = val || 'waiting…';
+  el.className   = 'value' + (val ? '' : ' empty');
+}
+
+// ---- Camera enumeration ----
+async function listCameras() {
+  try {
+    // need a temp stream to trigger permission prompt
+    const tmp = await navigator.mediaDevices.getUserMedia({video:true});
+    tmp.getTracks().forEach(t => t.stop());
+
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cams = devices.filter(d => d.kind === 'videoinput');
+    camSelect.innerHTML = '';
+    cams.forEach((c, i) => {
+      const opt = document.createElement('option');
+      opt.value = c.deviceId;
+      opt.textContent = c.label || `Camera ${i+1}`;
+      camSelect.appendChild(opt);
+    });
+  } catch(e) {
+    camSelect.innerHTML = '<option>Camera unavailable</option>';
+  }
+}
+
+// ---- Detect camera facing from track settings ----
+function detectFacing(track) {
+  const settings = track.getSettings();
+  if (settings.facingMode) {
+    currentFacing = settings.facingMode;   // "user" or "environment"
+  } else {
+    // Heuristic: if label contains "front" or "selfie" assume user-facing
+    const label = (track.label || '').toLowerCase();
+    currentFacing = (label.includes('front') || label.includes('selfie')) ? 'user' : 'environment';
+  }
+}
+
+// ---- Get device rotation ----
+function getRotation() {
+  if (screen.orientation && screen.orientation.angle !== undefined) {
+    return screen.orientation.angle;
+  }
+  // fallback
+  const a = window.orientation;
+  if (a === undefined) return 0;
+  // window.orientation: 0=portrait, 90=landscape-left, -90=landscape-right, 180=upside-down
+  return ((a % 360) + 360) % 360;
+}
+
+// ---- Start camera ----
+async function startCamera() {
+  const deviceId = camSelect.value;
+  const constraints = {
+    video: {
+      width:  { ideal: 480 },
+      height: { ideal: 360 },
+      frameRate: { ideal: 15 },
+    },
+    audio: false
+  };
+  if (deviceId) constraints.video.deviceId = { exact: deviceId };
+
+  try {
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+    video.srcObject = stream;
+    const track = stream.getVideoTracks()[0];
+    detectFacing(track);
+
+    // Start sending frames
+    sendInterval = setInterval(captureAndSend, 100);  // ~10 fps
+  } catch(e) {
+    alert('Camera error: ' + e.message);
+  }
+}
+
+// ---- Stop camera ----
+function stopCamera() {
+  if (sendInterval) { clearInterval(sendInterval); sendInterval = null; }
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  video.srcObject = null;
+  letterOvl.textContent = '';
+}
+
+// ---- Capture frame and send via WS ----
+function captureAndSend() {
+  if (!ws || ws.readyState !== WebSocket.OPEN) return;
+  if (!video.videoWidth) return;
+
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  ctx.drawImage(video, 0, 0);
+
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+
+  const msg = {
+    type: 'frame',
+    frame: dataUrl,
+    camera: {
+      facing:   currentFacing,
+      rotation: getRotation(),
+      mirrored: false,          // we send the raw frame, no CSS mirror
+      width:    video.videoWidth,
+      height:   video.videoHeight
+    }
+  };
+  ws.send(JSON.stringify(msg));
+}
+
+// ---- Browser TTS fallback ----
+function speakBrowser(text) {
+  if ('speechSynthesis' in window) {
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'sw-KE';
+    speechSynthesis.speak(u);
+  }
+}
+
+// ---- Send command ----
+function sendCmd(command) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type:'command', command }));
+  }
+}
+
+// ---- Wire up buttons ----
+document.getElementById('btn-start').onclick = startCamera;
+document.getElementById('btn-stop').onclick  = stopCamera;
+document.getElementById('btn-speak').onclick = () => sendCmd('speak');
+document.getElementById('btn-clear').onclick = () => sendCmd('clear');
+document.getElementById('btn-del-l').onclick = () => sendCmd('delete_letter');
+document.getElementById('btn-del-w').onclick = () => sendCmd('delete_word');
+
+// ---- Init ----
+listCameras();
+connectWS();
+</script>
+</body>
+</html>
