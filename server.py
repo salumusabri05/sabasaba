@@ -12,7 +12,23 @@ import cv2
 
 from pipeline import SignPredictor, TextBuilder, CameraMetadata
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="Bridging Silence")
+
+origins = [
+    "http://localhost:3000",
+    "https://www.bridgingsilence.org",
+    "https://bridgingsilence.org",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # --- Model path ---
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "model", "mlp_tsl_static.pkl")
