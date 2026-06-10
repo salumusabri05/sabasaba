@@ -24,9 +24,37 @@ os.makedirs(static_dir, exist_ok=True)
 app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
+from pydantic import BaseModel
+from typing import List
+
+class LandmarkRequest(BaseModel):
+    landmarks: List[List[float]]
+
+
 @app.get("/")
 async def root():
     return FileResponse(os.path.join(static_dir, "index.html"))
+
+
+@app.post("/predict")
+async def predict_landmarks(req: LandmarkRequest):
+    try:
+        # Predict sign using normalize_landmarks from predictor
+        X = predictor.normalize_landmarks(req.landmarks)
+        idx = predictor.model.predict(X)[0]
+        letter = predictor.le.inverse_transform([idx])[0]
+        confidence = 1.0
+        if hasattr(predictor.model, "predict_proba"):
+            confidence = float(predictor.model.predict_proba(X)[0].max())
+        
+        return {
+            "letter": letter,
+            "confidence": confidence,
+            "hand_detected": True
+        }
+    except Exception as e:
+        return {"error": str(e), "letter": "", "confidence": 0.0}
+
 
 
 @app.websocket("/ws")
