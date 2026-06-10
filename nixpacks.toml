@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["libGL", "glib"]
+nixPkgs = ["libGL", "glib", "python310"]
 
 [start]
 cmd = "python server.py"
