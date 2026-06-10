@@ -14,10 +14,8 @@ from pipeline import SignPredictor, TextBuilder, CameraMetadata
 
 app = FastAPI(title="Bridging Silence")
 
-# --- Model path (reuses the trained model from WINNING) ---
-MODEL_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "WINNING", "model", "mlp_tsl_static.pkl"
-)
+# --- Model path ---
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "model", "mlp_tsl_static.pkl")
 predictor = SignPredictor(MODEL_PATH)
 
 # --- Static files ---
@@ -105,4 +103,5 @@ async def websocket_endpoint(ws: WebSocket):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
