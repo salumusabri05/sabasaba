@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["libGL", "glib", "xorg.libxcb", "xorg.libX11", "xorg.libXext", "xorg.libXrender"]
+
+[phases.install]
+cmds = ["pip install --upgrade pip", "pip install opencv-python-headless opencv-contrib-python-headless && pip install -r requirements.txt"]
+
+[start]
+cmd = "python server.py"

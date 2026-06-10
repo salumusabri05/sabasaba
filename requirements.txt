@@ -1,8 +1,9 @@
 numpy==2.0.2
 scikit-learn==1.6.1
 joblib
-mediapipe==0.10.14
 opencv-python-headless
+opencv-contrib-python-headless
+mediapipe==0.10.14
 fastapi
 uvicorn[standard]
 websockets
