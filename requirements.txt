@@ -7,3 +7,4 @@ mediapipe==0.10.14
 fastapi
 uvicorn[standard]
 websockets
+azure-cognitiveservices-speech

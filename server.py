@@ -34,6 +34,23 @@ app.add_middleware(
 MODEL_PATH = os.path.join(os.path.dirname(__file__), "model", "mlp_tsl_static.pkl")
 predictor = SignPredictor(MODEL_PATH)
 
+# --- Azure Speech Configuration ---
+try:
+    import azure.cognitiveservices.speech as speechsdk
+    speech_key = os.environ.get("AZURE_SPEECH_KEY")
+    service_region = os.environ.get("AZURE_SPEECH_REGION", "eastus")
+    if not speech_key:
+        raise ValueError("AZURE_SPEECH_KEY environment variable is not set")
+    speech_config = speechsdk.SpeechConfig(subscription=speech_key, region=service_region)
+    speech_config.speech_synthesis_voice_name = "sw-KE-ZuriNeural"
+    # Set audio_config to None to synthesize to memory (audio_data bytes)
+    synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=None)
+    print("Azure Speech synthesizer initialized.")
+except (ImportError, Exception) as e:
+    print(f"Failed to initialize Azure Speech synthesizer: {e}")
+    synthesizer = None
+    speechsdk = None
+
 # --- Static files ---
 static_dir = os.path.join(os.path.dirname(__file__), "static")
 os.makedirs(static_dir, exist_ok=True)
@@ -127,9 +144,27 @@ async def websocket_endpoint(ws: WebSocket):
                 elif cmd == "delete_word":
                     text_builder.delete_word()
                 elif cmd == "speak":
+                    text_to_speak = text_builder.get_full_text()
+                    audio_b64 = None
+                    if synthesizer and text_to_speak.strip():
+                        try:
+                            # Run synthesis in executor to avoid blocking the event loop
+                            loop = asyncio.get_event_loop()
+                            result = await loop.run_in_executor(
+                                None,
+                                lambda: synthesizer.speak_text_async(text_to_speak).get()
+                            )
+                            if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+                                audio_b64 = base64.b64encode(result.audio_data).decode("utf-8")
+                            else:
+                                print(f"Azure Speech synthesis failed: {result.reason}")
+                        except Exception as ex:
+                            print(f"Azure Speech error: {ex}")
+
                     await ws.send_text(json.dumps({
                         "type": "speak",
-                        "text": text_builder.get_full_text(),
+                        "text": text_to_speak,
+                        "audio": audio_b64
                     }))
                     text_builder.clear()
 

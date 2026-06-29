@@ -283,7 +283,11 @@ function connectWS() {
       updateText(sentVal, d.sentence);
     }
     if (d.type === 'speak' && d.text) {
-      speakBrowser(d.text);
+      if (d.audio) {
+        playBase64Audio(d.audio, d.text);
+      } else {
+        speakBrowser(d.text);
+      }
     }
   };
 }
@@ -396,6 +400,21 @@ function captureAndSend() {
     }
   };
   ws.send(JSON.stringify(msg));
+}
+
+// ---- Azure TTS Audio Player ----
+function playBase64Audio(base64Audio, fallbackText) {
+  try {
+    const audioUrl = `data:audio/wav;base64,${base64Audio}`;
+    const audio = new Audio(audioUrl);
+    audio.play().catch(e => {
+      console.error("Error playing Azure TTS audio, falling back to browser TTS:", e);
+      speakBrowser(fallbackText);
+    });
+  } catch (e) {
+    console.error("Error creating audio object:", e);
+    speakBrowser(fallbackText);
+  }
 }
 
 // ---- Browser TTS fallback ----
