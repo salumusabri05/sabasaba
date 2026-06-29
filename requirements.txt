@@ -8,3 +8,4 @@ fastapi
 uvicorn[standard]
 websockets
 azure-cognitiveservices-speech
+python-dotenv
