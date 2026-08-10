@@ -1,0 +1,70 @@
+stages:
+  - deploy
+
+deploy_docker:
+  stage: deploy
+  image: alpine:latest
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+    - if: '$CI_COMMIT_BRANCH == "master"'
+  before_script:
+    - echo "Setting up SSH key for VPS deployment..."
+    - apk add --no-cache openssh-client bash
+    - eval $(ssh-agent -s)
+    # Support both Base64-encoded key and raw SSH key
+    - |
+      if [ -n "$SSH_PRIVATE_KEY_B64" ]; then
+        echo "$SSH_PRIVATE_KEY_B64" | base64 -d | tr -d '\r' | ssh-add -
+      elif [ -n "$SSH_PRIVATE_KEY" ]; then
+        echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+      else
+        echo "ERROR: Neither SSH_PRIVATE_KEY_B64 nor SSH_PRIVATE_KEY is set in GitLab CI/CD variables!"
+        exit 1
+      fi
+    - mkdir -p ~/.ssh
+    - chmod 700 ~/.ssh
+    - ssh-keyscan -H "${SERVER_IP:-169.58.79.218}" >> ~/.ssh/known_hosts || true
+    - echo "StrictHostKeyChecking no" >> ~/.ssh/config
+  script:
+    - echo "Deploying Docker container to ${SERVER_USER:-root}@${SERVER_IP:-169.58.79.218}:/var/www/letter-model..."
+    - |
+      ssh ${SERVER_USER:-root}@${SERVER_IP:-169.58.79.218} "TARGET_BRANCH='${CI_COMMIT_BRANCH}' bash -s" << 'EOF'
+        set -e
+
+        TARGET_DIR="/var/www/letter-model"
+        BRANCH="${TARGET_BRANCH:-master}"
+
+        echo "=== 1. Navigating to project directory: $TARGET_DIR ==="
+        if [ ! -d "$TARGET_DIR" ]; then
+          mkdir -p $TARGET_DIR
+        fi
+        cd $TARGET_DIR
+
+        echo "=== 2. Pulling latest code for branch: $BRANCH ==="
+        git fetch --all
+        git checkout $BRANCH
+        git reset --hard origin/$BRANCH
+
+        echo "=== 3. Building Docker image from Dockerfile ==="
+        docker build -t letter-model-api:latest .
+
+        echo "=== 4. Stopping & removing old container if running ==="
+        if docker ps -a --format '{{.Names}}' | grep -q "^letter-model-api$"; then
+          echo "Stopping and removing existing container 'letter-model-api'..."
+          docker stop letter-model-api || true
+          docker rm letter-model-api || true
+        fi
+
+        echo "=== 5. Running new Docker container on port 5005 ==="
+        docker run -d \
+          --name letter-model-api \
+          --restart always \
+          -p 5005:8000 \
+          -e PORT=8000 \
+          letter-model-api:latest
+
+        echo "=== 6. Cleaning up unused images ==="
+        docker image prune -f || true
+
+        echo "=== Docker Deployment Completed Successfully! ==="
+      EOF
