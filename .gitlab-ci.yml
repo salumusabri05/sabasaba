@@ -26,12 +26,12 @@ deploy_docker:
     - ssh-keyscan -H "${SERVER_IP:-169.58.79.218}" >> ~/.ssh/known_hosts || true
     - echo "StrictHostKeyChecking no" >> ~/.ssh/config
   script:
-    - echo "Deploying Docker container to ${SERVER_USER:-root}@${SERVER_IP:-169.58.79.218}:/var/www/letter-model..."
+    - echo "Deploying Docker container to ${SERVER_USER:-root}@${SERVER_IP:-169.58.79.218}:/var/www/makisatu-letters..."
     - |
       ssh ${SERVER_USER:-root}@${SERVER_IP:-169.58.79.218} "TARGET_BRANCH='${CI_COMMIT_BRANCH}' bash -s" << 'EOF'
         set -e
 
-        TARGET_DIR="/var/www/letter-model"
+        TARGET_DIR="/var/www/makisatu-letters"
         BRANCH="${TARGET_BRANCH:-master}"
 
         echo "=== 1. Navigating to project directory: $TARGET_DIR ==="
