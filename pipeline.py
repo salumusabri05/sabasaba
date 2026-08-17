@@ -196,8 +196,23 @@ class TextBuilder:
         self.hold_start = None
 
     def delete_letter(self):
-        if self.word:
-            self.word = self.word[:-1]
+        """
+        Deletes the last letter from the active word.
+        If active word is empty, pulls the last word from sentence and deletes its last letter.
+        Resets hold timers so the currently held gesture is not immediately re-added on the next frame.
+        """
+        if self.word.strip():
+            self.word = self.word.rstrip()[:-1]
+        elif self.sentence.strip():
+            words = self.sentence.strip().split()
+            last_word = words[-1]
+            remaining = words[:-1]
+            self.sentence = " ".join(remaining) + (" " if remaining else "")
+            self.word = last_word[:-1]
+
+        # Reset hold timer & previous letter tracking to prevent auto-re-adding
+        self.hold_start = time.time()
+        self.prev_letter = ""
 
     def delete_word(self):
         if self.word.strip():
